@@ -16,3 +16,12 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS scraped_books (
+  id SERIAL PRIMARY KEY,
+  title TEXT UNIQUE NOT NULL,
+  price NUMERIC,
+  rating INTEGER,
+  availability TEXT,
+  detail_path TEXT,
+  scraped_at TIMESTAMPTZ DEFAULT NOW()
+);

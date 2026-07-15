@@ -42,3 +42,29 @@ This was built and tested in GitHub Codespaces rather than locally, since local 
 
 ### Environment
 - `JWT_SECRET` is set via Docker Compose environment variables (also documented in `.env.example`).
+## The Polite Scraper
+
+### What was built
+A scraper for books.toscrape.com (a purpose-built practice site for scraping exercises) implementing the full fetch → parse → extract → clean → structure pipeline.
+
+- **Politeness measures:**
+  - Checks `/robots.txt` before scraping; since none exists on this site (404), proceeds under the standard convention that no robots.txt means no crawl restrictions.
+  - Identifies itself honestly via a custom `User-Agent` header (`FlyRankInternBot/1.0`, with contact info).
+  - Rate-limited to 1 request per second (`p-limit` + explicit delay) — no concurrent hammering of the target server.
+
+- **Extraction & cleaning:**
+  - Parses book listing pages with `cheerio`.
+  - Extracts: title, price, rating, availability, detail page link.
+  - Cleans price (`£51.77` → `51.77` numeric), converts star-rating CSS class (`Three`) to an integer (`3`).
+
+- **Storage:**
+  - Results saved to a `scraped_books` table in the existing Postgres database (same stack from BE-04), deduplicated by title (`ON CONFLICT DO NOTHING`).
+  - `POST /api/scrape` — triggers a fresh scrape of 3 pages (~60 books) and saves results.
+  - `GET /api/scrape` — returns everything currently stored.
+
+### Tested
+- `POST /api/scrape` → scraped and saved 60 books across 3 pages, ~3 seconds total (rate-limited).
+- `GET /api/scrape` → confirmed all 60 records persisted correctly in Postgres with timestamps.
+
+### Environment
+Developed and tested in GitHub Codespaces (same setup as prior assignments, due to local hardware virtualization limitations).
