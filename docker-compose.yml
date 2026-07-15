@@ -17,6 +17,12 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
   app:
     build: .
     ports:
@@ -24,9 +30,24 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/tasks_db
       JWT_SECRET: your-super-secret-key-change-this-in-production
+      REDIS_URL: redis://redis:6379
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build: .
+    command: node worker.js
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/tasks_db
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
 volumes:
   pgdata:

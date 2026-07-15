@@ -68,3 +68,24 @@ A scraper for books.toscrape.com (a purpose-built practice site for scraping exe
 
 ### Environment
 Developed and tested in GitHub Codespaces (same setup as prior assignments, due to local hardware virtualization limitations).
+## BE-06: Background Jobs
+
+### What was built
+A background job pipeline using BullMQ + Redis, simulating a slow AI call (since a real A6 AI integration wasn't available):
+
+- **`POST /api/jobs`** — accepts a request, creates a job record in Postgres, enqueues it to Redis via BullMQ, and returns **202 Accepted** immediately with a `jobId` and `status: "queued"`.
+- **`worker.js`** — a separate Docker service that pulls jobs off the queue and processes them (simulated 5-second AI call, with a 30% random failure rate to exercise retry logic).
+- **`GET /api/jobs/:id`** — reports current status: `queued`, `processing`, `completed`, or `failed`, along with the result or error once known.
+
+### Non-negotiables addressed
+- **Idempotency:** requests include an `Idempotency-Key` header. Resubmitting the same key returns the existing job instead of creating a duplicate (`ON CONFLICT DO NOTHING` + lookup in `jobRepository.js`).
+- **Retries:** BullMQ configured with 3 attempts and exponential backoff. Verified working — simulated failures trigger automatic retries with increasing delay.
+- **Alerts:** failed jobs are logged prominently (`🚨 ALERT:`) in the worker's output, including after final retry exhaustion. In production this would route to email/Slack instead of console logs.
+
+### Tested
+- Submitted jobs via `POST /api/jobs` — confirmed instant 202 response (not waiting for the 5-second simulated work).
+- Polled `GET /api/jobs/:id` — confirmed status transitions from `queued` → `processing` → `completed`.
+- Confirmed idempotency — resubmitting the same `Idempotency-Key` returned the original job, not a new one.
+
+### Environment
+Added `redis` and `worker` services to `docker-compose.yml`. Developed and tested in GitHub Codespaces.

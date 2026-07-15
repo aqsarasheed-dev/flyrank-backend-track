@@ -25,3 +25,14 @@ CREATE TABLE IF NOT EXISTS scraped_books (
   detail_path TEXT,
   scraped_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS jobs (
+  id SERIAL PRIMARY KEY,
+  idempotency_key TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'queued',
+  input JSONB,
+  result JSONB,
+  error TEXT,
+  attempts INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
