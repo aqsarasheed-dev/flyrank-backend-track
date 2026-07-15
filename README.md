@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## BE-04: Containerize Your Stack
 
-## Getting Started
+### What changed
+- Added `docker-compose.yml` running two services: `db` (Postgres 16) and `app` (this Next.js API).
+- Added `Dockerfile` to containerize the app.
+- Added `init.sql` to create the `tasks` table and seed initial rows.
+- Added `repositories/postgresRepository.js` implementing the exact same interface as the original in-memory `repositories/taskRepository.js` (`findAll`, `findById`, `create`).
+- Swapped one import line in `services/taskService.js` to point at `postgresRepository.js` instead of `taskRepository.js`. **No other code in the service or route layer changed** — this proves the layered architecture from A2 works as intended.
 
-First, run the development server:
+### How to run
+App available at `http://localhost:3000/api/tasks`.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Persistence proof
+1. Started the stack, confirmed 2 seed tasks via `GET /api/tasks`.
+2. Created a 3rd task via `POST /api/tasks`.
+3. Ran `docker compose down` — fully removed both containers (verified with `docker ps -a`).
+4. Confirmed the named volume `pgdata` still existed via `docker volume ls`.
+5. Ran `docker compose up` again — Postgres logged "database directory appears to contain a database; skipping initialization."
+6. Ran `GET /api/tasks` again — all 3 tasks were still present, confirming data survived a full container removal and restart.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment
+- Connection string is read from `DATABASE_URL` in `.env.local` (gitignored).
+- `.env.example` is committed showing the expected format without real secrets.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Note on development environment
+This was built and tested in GitHub Codespaces rather than locally, since local Docker virtualization (VT-x) wasn't available/enabled on the development machine's hardware/BIOS.
