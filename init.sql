@@ -10,3 +10,9 @@ INSERT INTO tasks (title, description, done) VALUES
   ('Learn Docker', 'Containerize the stack', false),
   ('Learn Postgres', 'Persist data properly', false)
 ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
