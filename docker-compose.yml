@@ -31,6 +31,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/tasks_db
       JWT_SECRET: your-super-secret-key-change-this-in-production
       REDIS_URL: redis://redis:6379
+    volumes:
+      - reports_data:/app/reports
     depends_on:
       db:
         condition: service_healthy
@@ -43,6 +45,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/tasks_db
       REDIS_URL: redis://redis:6379
+    volumes:
+      - reports_data:/app/reports
     depends_on:
       db:
         condition: service_healthy
@@ -51,3 +55,4 @@ services:
 
 volumes:
   pgdata:
+  reports_data:

@@ -10,6 +10,7 @@
 ### How to run
 App available at `http://localhost:3000/api/tasks`.
 
+
 ### Persistence proof
 1. Started the stack, confirmed 2 seed tasks via `GET /api/tasks`.
 2. Created a 3rd task via `POST /api/tasks`.
@@ -89,3 +90,23 @@ A background job pipeline using BullMQ + Redis, simulating a slow AI call (since
 
 ### Environment
 Added `redis` and `worker` services to `docker-compose.yml`. Developed and tested in GitHub Codespaces.
+## PDF Report Generator
+
+### What was built
+- Aggregates stats from the `scraped_books` table (total count, average price, breakdown by rating, top 5 most expensive books).
+- Generates a PDF report using `pdfkit`, stored on disk in a persistent Docker volume (`reports_data`).
+- Generation runs as a **background job** (reusing the BullMQ/Redis pattern from BE-06) — the request returns instantly, the worker does the actual PDF rendering.
+- The API never returns the PDF content directly — only a `downloadUrl` link once the report is ready, following proper artifact-handling practice (store and link, don't pass large files through JSON).
+
+### Endpoints
+- `POST /api/reports` — triggers generation, returns `202`-style response with a `reportId` immediately.
+- `GET /api/reports/:id` — reports status (`queued`/`processing`/`completed`/`failed`); includes `downloadUrl` once completed.
+- `GET /api/reports/:id/download` — streams the actual PDF file for download.
+
+### Tested
+- `POST /api/reports` → instant response with `reportId`.
+- Polled `GET /api/reports/:id` → confirmed status reached `completed`.
+- Downloaded via `GET /api/reports/:id/download` → confirmed valid PDF (`%PDF-1.3` header, proper internal structure).
+
+### Environment
+Added a `reports_data` volume shared between `app` and `worker` services so generated files persist and are accessible for download. Developed and tested in GitHub Codespaces.
