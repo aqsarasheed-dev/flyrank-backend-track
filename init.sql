@@ -45,3 +45,24 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   completed_at TIMESTAMPTZ
 );
+CREATE TABLE IF NOT EXISTS widgets (
+  id SERIAL PRIMARY KEY,
+  owner_id INTEGER NOT NULL REFERENCES users(id),
+  type TEXT NOT NULL,
+  copy JSONB NOT NULL,
+  fields JSONB NOT NULL,
+  targeting JSONB DEFAULT '{}',
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS submissions (
+  id SERIAL PRIMARY KEY,
+  widget_id INTEGER NOT NULL REFERENCES widgets(id),
+  data JSONB NOT NULL,
+  ip TEXT,
+  geo JSONB,
+  spam_flagged BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

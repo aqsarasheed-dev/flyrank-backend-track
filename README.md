@@ -110,3 +110,75 @@ Added `redis` and `worker` services to `docker-compose.yml`. Developed and teste
 
 ### Environment
 Added a `reports_data` volume shared between `app` and `worker` services so generated files persist and are accessible for download. Developed and tested in GitHub Codespaces.
+
+## Capstone: Embeddable Widget & Lead-Capture Platform
+
+### What was built
+A platform where a customer defines a widget, gets a one-line `<script>` embed snippet, drops it on any external website, and receives submissions back — validated, rate-limited, spam-checked, geo-enriched, and dashboarded.
+
+### Architecture
+
+```
+owner (authed) ──POST /api/widgets──► widgets table (tenant-isolated by owner_id)
+                                              │
+                                              ▼
+customer site ──<script src=widget.js>──► GET /api/widgets/:id/config (cached, CORS: *)
+   (different                                │
+    origin)                                  ▼
+                                        widget renders (popover + form)
+                                              │
+visitor submits ──CORS POST /api/submissions─┤
+                                              ▼
+                                   validate (required fields, size limit)
+                                              │
+                                              ▼
+                                   rate limit (Redis, per IP+widget, 5/60s)
+                                              │
+                                              ▼
+                                   spam check (honeypot + email heuristic)
+                                              │
+                                              ▼
+                                   enrich: IP → geo, 3-provider fallback chain
+                                              │
+                                              ▼
+                                   store submission (Postgres)
+                                              │
+                                              ▼
+                                   safe webhook side effect (failure never fails the submission)
+                                              │
+                                              ▼
+owner dashboard (authed) ◄── GET /api/dashboard/submissions, /api/dashboard/stats
+```
+
+### Key decisions
+
+- **Tenant isolation:** every widget has an `owner_id`. The service layer checks ownership on every read/write/delete — a logged-in user gets a `403` (not just `404`) when trying to touch another user's widget, proving isolation is enforced, not just implied by obscurity.
+
+- **Cached config delivery:** `GET /api/widgets/:id/config` sets `Cache-Control: public, max-age=300, s-maxage=300, stale-while-revalidate=60` and an `ETag` tied to the widget's `version` field — so edits automatically bust the cache without needing manual invalidation.
+
+- **CORS:** the config and submission endpoints both explicitly set `Access-Control-Allow-Origin: *`, since these are meant to be called from arbitrary customer websites, by design. Admin/dashboard endpoints do not — they require the JWT auth header, so cross-origin access there is meaningless without a valid token anyway.
+
+- **Rate limiting:** implemented with Redis (`INCR` + `EXPIRE`), not in-memory, since in-memory limits don't survive a restart or work if the app ever scales to multiple instances. Limited to 5 submissions per IP+widget per 60 seconds.
+
+- **Spam control:** a honeypot field (`_honeypot`) that real users never fill but bots often do, plus a basic email-format heuristic. Flagged submissions are still stored (not silently dropped) so the widget owner can review them.
+
+- **Geo enrichment fallback chain:** three mocked providers tried in order. Provider 1 can be forced down via an `x-test-geo-provider-1-down` test header (or the `GEO_PROVIDER_1_DOWN` env var) — this makes the fallback test deterministic without needing a real third-party API to actually go down during grading.
+
+- **Safe side effects:** the webhook call is wrapped so that any failure is logged (`🚨 ALERT:`) but never thrown — the submission itself always succeeds even if the notification side effect fails. Verified by a 30% simulated random webhook failure rate during testing; submissions never failed as a result.
+
+### Tested
+- Real cross-origin embed proven on a `file://` HTML page (a genuinely different origin), confirming the script loads and renders correctly.
+- CORS preflight (`OPTIONS`) returns `204` with correct headers.
+- Validation rejects missing fields and oversized payloads (`400`).
+- Rate limiter triggers `429` after 5 requests within 60 seconds.
+- Geo fallback chain confirmed via direct database inspection (provider1 → provider2 when forced down) and via automated test.
+- Dashboard stats confirmed accurate against known test data (7 submissions, correct country breakdown, correct spam count).
+- Automated test suite (`tests/capstone.test.js`, run via `npm test`): 5/5 passing — CORS preflight, missing-field validation, oversized-payload validation, rate limiter, and fallback chain.
+
+### Known limitations / stretch not implemented
+- Geo providers are mocked, not real third-party APIs (per the assignment's realistic scope note).
+- Webhook delivery is simulated (console-logged), not a real HTTP call to a customer URL.
+- No real-time dashboard updates, A/B targeting, or CAPTCHA — left as documented stretch goals.
+
+### Environment
+Developed and tested in GitHub Codespaces (local Docker unavailable due to hardware virtualization limitations on the dev machine, as documented in earlier assignments).

@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/tasks_db
       JWT_SECRET: your-super-secret-key-change-this-in-production
       REDIS_URL: redis://redis:6379
+      GEO_PROVIDER_1_DOWN: "false"
     volumes:
       - reports_data:/app/reports
     depends_on:
