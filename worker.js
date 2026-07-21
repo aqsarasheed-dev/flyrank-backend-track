@@ -1,7 +1,5 @@
 import { Worker } from "bullmq";
 import * as jobRepository from "./repositories/jobRepository.js";
-import * as reportRepository from "./repositories/reportRepository.js";
-import { generateReportPdf } from "./lib/generatePdf.js";
 
 const connection = { url: process.env.REDIS_URL };
 
@@ -59,7 +57,7 @@ jobWorker.on("failed", (job, err) => {
   }
 });
 
-console.log("👷 Job worker started, listening for AI jobs...");
+console.log("👷 Worker started, listening for jobs...");
 
 // ============================================
 // WORKER 2: Report Generation (BE-07 / PDF report)
